@@ -32,7 +32,9 @@ anagrams ::
   Chars
   -> FilePath
   -> IO (List Chars)
-anagrams =
+anagrams cs filePath = --do
+  -- str <- readFile filePath
+  -- return [cs]
   error "todo: Course.Anagrams#anagrams"
 
 -- Compare two strings for equality, ignoring case

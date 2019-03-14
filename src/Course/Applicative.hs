@@ -47,14 +47,12 @@ instance Applicative ExactlyOne where
   pure ::
     a
     -> ExactlyOne a
-  pure =
-    error "todo: Course.Applicative pure#instance ExactlyOne"
+  pure a = ExactlyOne a
   (<*>) ::
     ExactlyOne (a -> b)
     -> ExactlyOne a
     -> ExactlyOne b
-  (<*>) =
-    error "todo: Course.Applicative (<*>)#instance ExactlyOne"
+  (<*>) (ExactlyOne f) (ExactlyOne a) = ExactlyOne (f a)
 
 -- | Insert into a List.
 --
@@ -66,14 +64,15 @@ instance Applicative List where
   pure ::
     a
     -> List a
-  pure =
-    error "todo: Course.Applicative pure#instance List"
+  pure a = a :. Nil
   (<*>) ::
     List (a -> b)
     -> List a
     -> List b
-  (<*>) =
-    error "todo: Course.Apply (<*>)#instance List"
+  (<*>) (f :. fs) as = (f <$> as) ++ (fs <*> as)
+  -- (<*>) fs (a :. Nil) = fs <*>
+  -- (<*>) fs (a :. as) = (fs <*> (pure a)) ++ (fs <*> as)
+  (<*>) _ _ = Nil
 
 -- | Insert into an Optional.
 --
@@ -91,14 +90,13 @@ instance Applicative Optional where
   pure ::
     a
     -> Optional a
-  pure =
-    error "todo: Course.Applicative pure#instance Optional"
+  pure = Full
   (<*>) ::
     Optional (a -> b)
     -> Optional a
     -> Optional b
-  (<*>) =
-    error "todo: Course.Apply (<*>)#instance Optional"
+  (<*>) (Full f) (Full a) = Full $ f a
+  (<*>) _ _ = Empty -- If either are Empty then return Empty
 
 -- | Insert into a constant function.
 --
@@ -122,14 +120,15 @@ instance Applicative ((->) t) where
   pure ::
     a
     -> ((->) t a)
-  pure =
-    error "todo: Course.Applicative pure#((->) t)"
+  -- Can be written as a -> (t -> a) ==> a -> t -> a
+  -- const :: a -> b -> a
+  -- ignores second argument
+  pure = const
   (<*>) ::
     ((->) t (a -> b))
     -> ((->) t a)
     -> ((->) t b)
-  (<*>) =
-    error "todo: Course.Apply (<*>)#instance ((->) t)"
+  (<*>) fab fa = \t -> (fab t) (fa t)
 
 
 -- | Apply a binary function in the environment.
@@ -157,8 +156,7 @@ lift2 ::
   -> f a
   -> f b
   -> f c
-lift2 =
-  error "todo: Course.Applicative#lift2"
+lift2 f fa fb = pure f <*> fa <*> fb
 
 -- | Apply a ternary function in the environment.
 -- /can be written using `lift2` and `(<*>)`./
@@ -190,8 +188,7 @@ lift3 ::
   -> f b
   -> f c
   -> f d
-lift3 =
-  error "todo: Course.Applicative#lift3"
+lift3 f fa fb fc = lift2 f fa fb <*> fc
 
 -- | Apply a quaternary function in the environment.
 -- /can be written using `lift3` and `(<*>)`./
@@ -224,16 +221,14 @@ lift4 ::
   -> f c
   -> f d
   -> f e
-lift4 =
-  error "todo: Course.Applicative#lift4"
+lift4 f fa fb fc fd = lift3 f fa fb fc <*> fd
 
 -- | Apply a nullary function in the environment.
 lift0 ::
   Applicative f =>
   a
   -> f a
-lift0 =
-  error "todo: Course.Applicative#lift0"
+lift0 = pure
 
 -- | Apply a unary function in the environment.
 -- /can be written using `lift0` and `(<*>)`./
@@ -251,8 +246,7 @@ lift1 ::
   (a -> b)
   -> f a
   -> f b
-lift1 =
-  error "todo: Course.Applicative#lift1"
+lift1 f fa = lift0 f <*> fa
 
 -- | Apply, discarding the value of the first argument.
 -- Pronounced, right apply.
@@ -277,8 +271,18 @@ lift1 =
   f a
   -> f b
   -> f b
-(*>) =
-  error "todo: Course.Applicative#(*>)"
+-- (*>) fa fb = (\b -> (\_ -> b)) <$> fb <*> fa WRONG
+-- (*>) fa fb = lift1 (\b -> (\_ -> b)) fb <*> fa WRONG
+(*>) fa fb = ((\b -> b) <$ fa) <*> fb
+-- (\b -> b) <$ fa ====> a functor the same length as `fa` that can be applied to another functor
+-- Consider
+-- ((\a -> a) :. Nil) <*> (1 :. 2 :. 3 :. Nil)
+-- ((\a -> a) :. ((\a -> a)) :. Nil) <*> (1 :. 2 :. 3 :. Nil)
+
+-- [[], [], []]
+
+-- (<*>) (f :. fs) as = (f <$> as) ++ (fs <*> as)
+
 
 -- | Apply, discarding the value of the second argument.
 -- Pronounced, left apply.
@@ -303,8 +307,7 @@ lift1 =
   f b
   -> f a
   -> f b
-(<*) =
-  error "todo: Course.Applicative#(<*)"
+(<*) fb fa = (\b -> (\_ -> b)) <$> fb <*> fa
 
 -- | Sequences a list of structures to a structure of list.
 --
@@ -326,8 +329,9 @@ sequence ::
   Applicative f =>
   List (f a)
   -> f (List a)
-sequence =
-  error "todo: Course.Applicative#sequence"
+sequence (fa :. fas) = lift2 (:.) fa (sequence fas)
+sequence Nil = pure Nil
+-- :. is a binary function a -> List a -> List a
 
 -- | Replicate an effect a given number of times.
 --
@@ -352,8 +356,8 @@ replicateA ::
   Int
   -> f a
   -> f (List a)
-replicateA =
-  error "todo: Course.Applicative#replicateA"
+replicateA n fa = let fas = replicate n fa
+  in sequence fas
 
 -- | Filter a list with a predicate that produces an effect.
 --
@@ -380,8 +384,16 @@ filtering ::
   (a -> f Bool)
   -> List a
   -> f (List a)
-filtering =
-  error "todo: Course.Applicative#filtering"
+filtering f (a :. as) = let fbool = f a
+                            fas = filtering f as
+                          in lift2 (\b xs -> if b then a :. xs else xs) fbool fas
+filtering _ Nil = pure Nil
+
+-- filtering f (as) = let fbools = sequence (f <$> as) -- f (List Bool)
+--                     in lift2 (\b -> filter (const b)) fbools (pure as)
+-- filter f (x:xs) = if f x then x : (filter xs) else filter xs
+
+-- liftA2 :: (Bool->List a->List a) -> f Bool -> f (List a) -> f (List a)
 
 -----------------------
 -- SUPPORT LIBRARIES --

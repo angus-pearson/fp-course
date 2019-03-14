@@ -41,8 +41,7 @@ instance Functor ExactlyOne where
     (a -> b)
     -> ExactlyOne a
     -> ExactlyOne b
-  (<$>) =
-    error "todo: Course.Functor (<$>)#instance ExactlyOne"
+  (<$>) f (ExactlyOne a) = ExactlyOne (f a)
 
 -- | Maps a function on the List functor.
 --
@@ -56,8 +55,8 @@ instance Functor List where
     (a -> b)
     -> List a
     -> List b
-  (<$>) =
-    error "todo: Course.Functor (<$>)#instance List"
+  (<$>) f (x :. xs) = (f x) :. (f <$> xs)
+  (<$>) _ Nil = Nil
 
 -- | Maps a function on the Optional functor.
 --
@@ -71,8 +70,8 @@ instance Functor Optional where
     (a -> b)
     -> Optional a
     -> Optional b
-  (<$>) =
-    error "todo: Course.Functor (<$>)#instance Optional"
+  (<$>) f (Full x) = Full (f x)
+  (<$>) _ Empty = Empty
 
 -- | Maps a function on the reader ((->) t) functor.
 --
@@ -83,8 +82,10 @@ instance Functor ((->) t) where
     (a -> b)
     -> ((->) t a)
     -> ((->) t b)
-  (<$>) =
-    error "todo: Course.Functor (<$>)#((->) t)"
+-- Can be written as (a -> b) -> (t -> a) -> (t -> b)
+-- we want to return a function t -> b
+-- t -> a -> b
+  (<$>) f a = f . a
 
 -- | Anonymous map. Maps a constant value on a functor.
 --
@@ -99,8 +100,7 @@ instance Functor ((->) t) where
   a
   -> f b
   -> f a
-(<$) =
-  error "todo: Course.Functor#(<$)"
+(<$) a fun = (\_ -> a) <$> fun
 
 -- | Anonymous map producing unit value.
 --
@@ -119,8 +119,7 @@ void ::
   Functor f =>
   f a
   -> f ()
-void =
-  error "todo: Course.Functor#void"
+void fa = const () <$> fa
 
 -----------------------
 -- SUPPORT LIBRARIES --
