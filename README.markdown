@@ -1,5 +1,7 @@
 # Functional Programming Course
 
+<!-- Testing: cabal test tasty --show-detail=direct --test-option=--pattern="Tests.FILENAME." -->
+
 ![Data61](http://i.imgur.com/0h9dFhl.png)
 
 ### Written by Tony Morris & Mark Hibberd for Data61 (formerly NICTA)
@@ -243,12 +245,12 @@ After this, the following progression of modules is recommended:
 * `Course.Monad`✅
 * `Course.FileIO`✅
 * `Course.State`✅
-* `Course.StateT`
-* `Course.Extend`
-* `Course.Comonad`
-* `Course.Compose`
-* `Course.Traversable`
-* `Course.ListZipper`
+* `Course.StateT`✅
+* `Course.Extend`✅
+* `Course.Comonad`✅
+* `Course.Compose`✅
+* `Course.Traversable`✅
+* `Course.ListZipper`✅
 * `Course.Parser` *(see also `Course.Person` for the parsing rules)*
 * `Course.MoreParser`
 * `Course.JsonParser`
